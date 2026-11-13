@@ -2,43 +2,111 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hello, World</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #eaf6ff;
-      font-family: system-ui, sans-serif;
-    }
-    h1 { color: #2d5a27; margin: 0 0 8px; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Haze Tracker SG</title>
+  <meta name="description" content="Live 24-hour PSI and 1-hour PM2.5 for Singapore's regions, with haze alerts.">
+  <meta name="theme-color" content="#34506b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Haze SG">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Hello, World!</h1>
-  <svg width="260" height="340" viewBox="0 0 260 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A pink flower">
-    <!-- stem -->
-    <path d="M130 150 C125 210 138 260 130 330" stroke="#3b8a3b" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <!-- leaves -->
-    <path d="M132 260 C170 235 200 240 215 255 C190 275 155 275 132 260 Z" fill="#4caf50"/>
-    <path d="M128 220 C95 195 65 200 50 215 C72 238 105 238 128 220 Z" fill="#4caf50"/>
-    <!-- petals -->
-    <g transform="translate(130 100)" fill="#ff7eb6" stroke="#e0508f" stroke-width="2">
-      <ellipse cx="0" cy="-45" rx="22" ry="40"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(45)"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(90)"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(135)"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(180)"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(225)"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(270)"/>
-      <ellipse cx="0" cy="-45" rx="22" ry="40" transform="rotate(315)"/>
-    </g>
-    <!-- center -->
-    <circle cx="130" cy="100" r="24" fill="#ffd54a" stroke="#e0a800" stroke-width="3"/>
-  </svg>
+  <header class="top">
+    <div class="top-inner">
+      <img src="icons/icon-192.png" alt="" width="40" height="40" class="logo">
+      <div class="titles">
+        <h1>Haze Tracker</h1>
+        <p id="updated" class="sub" aria-live="polite">Loading…</p>
+      </div>
+      <button id="refresh" class="icon-btn" type="button" aria-label="Refresh readings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="banner" class="banner" role="status" hidden></div>
+
+    <section id="overall" class="overall" aria-label="Singapore overall" hidden></section>
+
+    <section aria-labelledby="regions-h">
+      <h2 id="regions-h">By region</h2>
+      <div id="regions" class="regions">
+        <p class="placeholder">Fetching the latest readings from NEA…</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="alerts-h">
+      <h2 id="alerts-h">Haze alerts</h2>
+      <p class="hint">Get a notification when a region's 24-hr PSI reaches your threshold.</p>
+      <form id="alert-form" novalidate>
+        <div class="field">
+          <label for="region">Region</label>
+          <select id="region"></select>
+        </div>
+        <div class="field">
+          <label for="threshold">PSI threshold</label>
+          <input id="threshold" type="number" inputmode="numeric" min="1" max="500" step="1" value="101" required>
+          <div class="chips" role="group" aria-label="Threshold presets">
+            <button type="button" class="chip" data-threshold="51">51 · Moderate</button>
+            <button type="button" class="chip" data-threshold="101">101 · Unhealthy</button>
+            <button type="button" class="chip" data-threshold="201">201 · Very unhealthy</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="save" type="submit" class="primary">Turn on alerts</button>
+          <button id="disable" type="button" class="secondary" hidden>Turn off</button>
+          <button id="test" type="button" class="secondary">Send test</button>
+        </div>
+      </form>
+      <p id="alert-status" class="status" aria-live="polite"></p>
+      <p class="fine">
+        Alerts are checked each time the app refreshes (every 5 minutes while it is open).
+        Some Android phones also check in the background after the app is installed, but
+        browsers don't guarantee that, so keep the app open for the most reliable alerts.
+      </p>
+    </section>
+
+    <section id="install" class="panel" hidden>
+      <h2>Add to Home Screen</h2>
+      <button id="install-btn" type="button" class="primary" hidden>Install app</button>
+      <p id="ios-hint" class="hint" hidden>
+        On iPhone or iPad: tap the Share button, then <strong>Add to Home Screen</strong>.
+        Alerts only work when the app is opened from the Home Screen icon.
+      </p>
+    </section>
+
+    <details class="legend">
+      <summary>What do the numbers mean?</summary>
+      <div class="legend-grid">
+        <div>
+          <h3>24-hr PSI</h3>
+          <ul id="legend-psi"></ul>
+        </div>
+        <div>
+          <h3>1-hr PM2.5 (µg/m³)</h3>
+          <ul id="legend-pm"></ul>
+        </div>
+      </div>
+      <p class="fine">The overall figure is the highest of the five regions, as NEA reports it. NEA publishes the 1-hour reading as PM2.5, not as a PSI value.</p>
+    </details>
+  </main>
+
+  <footer>
+    <p>Contains information from the NEA real-time PSI and PM2.5 datasets accessed from
+      <a href="https://data.gov.sg" rel="noopener">data.gov.sg</a>, made available under the
+      <a href="https://data.gov.sg/open-data-licence" rel="noopener">Singapore Open Data Licence v1.0</a>.
+      Not an official NEA app.</p>
+  </footer>
+
+  <script src="lib.js"></script>
+  <script src="store.js"></script>
+  <script src="alerts.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
